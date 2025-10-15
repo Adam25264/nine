@@ -1,0 +1,2580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SmartTendance - Student Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <!-- Stripe.js for real payments -->
+    <script src="https://js.stripe.com/v3/"></script>
+    <!-- PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=sb&currency=USD"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        :root {
+            --primary: #44ff44;
+            --secondary: #3366cc;
+            --danger: #ff4444;
+            --warning: #ffaa00;
+            --success: #10b981;
+            --dark: #121212;
+            --darker: #0a0a0a;
+            --light: #f5f5f5;
+            --card-bg: #1a1a1a;
+            --card-border: #333;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        
+        body {
+            background: var(--dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: all 0.3s ease;
+            padding-bottom: 80px;
+        }
+        
+        body.light-mode {
+            --primary: #2563eb;
+            --secondary: #3b82f6;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --dark: #f8fafc;
+            --darker: #e2e8f0;
+            --light: #ffffff;
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .app-container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding-bottom: 80px;
+        }
+        
+        /* Enhanced Header for Mobile */
+        .header {
+            background: linear-gradient(135deg, var(--darker) 0%, var(--card-bg) 100%);
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid var(--card-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        
+        .header-content {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .header h1 {
+            color: var(--primary);
+            font-size: 20px;
+            margin-bottom: 2px;
+            text-align: left;
+        }
+        
+        .student-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .theme-toggle, .settings-toggle, .new-course-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: var(--shadow);
+        }
+        
+        .theme-toggle:hover, .settings-toggle:hover, .new-course-toggle:hover {
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        /* Enhanced Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            padding: 8px 5px;
+            z-index: 1000;
+        }
+        
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 5px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 10px;
+            min-height: 50px;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+            background: rgba(68, 255, 68, 0.1);
+        }
+        
+        .nav-item i {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+        
+        .nav-item .nav-label {
+            font-size: 10px;
+            font-weight: 500;
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            padding: 15px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Improved Scanner Section for Mobile */
+        .scanner-section {
+            text-align: center;
+        }
+        
+        .scanner-box {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px solid var(--card-border);
+            box-shadow: var(--shadow);
+        }
+        
+        .camera-container {
+            width: 100%;
+            max-width: 300px;
+            height: 280px;
+            margin: 0 auto 15px;
+            border: 3px solid var(--primary);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            position: relative;
+        }
+        
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: var(--primary);
+            animation: scan 2s infinite;
+            box-shadow: 0 0 10px var(--primary);
+        }
+        
+        @keyframes scan {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
+        }
+        
+        .scanner-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn:disabled {
+            background: var(--text-secondary);
+            color: var(--text-primary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+        }
+        
+        .btn-small {
+            padding: 10px 12px;
+            font-size: 13px;
+            width: auto;
+            margin: 2px;
+        }
+        
+        /* Enhanced Subscription Status Banner for Mobile */
+        .subscription-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            margin: 12px 0;
+            text-align: center;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            border-left: 5px solid #4CAF50;
+        }
+        
+        .subscription-banner.expired {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            border-left: 5px solid #ff4444;
+        }
+        
+        .banner-content {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .banner-content h3 {
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        
+        .banner-content p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        /* Trial Info Banner */
+        .trial-banner {
+            background: linear-gradient(135deg, #000000 0%, #333333 50%, #ffffff 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            margin: 12px 0;
+            text-align: center;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            border-left: 5px solid #ffffff;
+        }
+        
+        /* Enhanced Tabular Attendance History for Mobile */
+        .attendance-table-container {
+            margin-top: 15px;
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            font-size: 12px;
+            min-width: 500px;
+        }
+        
+        .attendance-table th {
+            background: var(--darker);
+            color: var(--text-primary);
+            font-weight: bold;
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 2px solid var(--card-border);
+            border-right: 1px solid var(--card-border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .attendance-table th:last-child {
+            border-right: none;
+        }
+        
+        .attendance-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--card-border);
+            border-right: 1px solid var(--card-border);
+            color: var(--text-secondary);
+        }
+        
+        .attendance-table td:last-child {
+            border-right: none;
+        }
+        
+        .attendance-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .attendance-table tr:hover {
+            background: rgba(37, 99, 235, 0.05);
+        }
+        
+        .status-present {
+            color: var(--success);
+            font-weight: bold;
+        }
+        
+        .status-absent {
+            color: var(--danger);
+            font-weight: bold;
+        }
+        
+        .action-cell {
+            text-align: center;
+        }
+        
+        .delete-record-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 6px 8px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+        
+        .delete-record-btn:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
+        
+        .history-header {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .history-title-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-select {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px;
+            border-radius: 8px;
+            background: var(--darker);
+            color: var(--text-primary);
+            border: 1px solid var(--card-border);
+            font-size: 13px;
+        }
+        
+        /* Enhanced Summary Table for Mobile */
+        .summary-section {
+            margin-bottom: 20px;
+        }
+        
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            font-size: 13px;
+        }
+        
+        .summary-table th, .summary-table td {
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+            border-right: 1px solid var(--card-border);
+        }
+        
+        .summary-table th:last-child, .summary-table td:last-child {
+            border-right: none;
+        }
+        
+        .summary-table th {
+            background: var(--darker);
+            color: var(--text-primary);
+            font-weight: bold;
+        }
+        
+        .summary-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .summary-table tr:hover {
+            background: rgba(37, 99, 235, 0.05);
+        }
+        
+        /* Enhanced Subscription Section for Mobile */
+        .subscription-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px solid var(--primary);
+            box-shadow: var(--shadow);
+        }
+        
+        .subscription-info {
+            margin: 12px 0;
+        }
+        
+        .subscription-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--card-border);
+            font-size: 14px;
+        }
+        
+        .payment-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 15px 0;
+        }
+        
+        .payment-option {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .payment-option:hover {
+            background: rgba(37, 99, 235, 0.1);
+            border-color: var(--primary);
+        }
+        
+        .payment-icon {
+            margin-right: 12px;
+            font-size: 20px;
+            color: var(--primary);
+        }
+        
+        /* Trial Info */
+        .trial-info {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.15) 0%, rgba(51, 51, 51, 0.15) 50%, rgba(255, 255, 255, 0.15) 100%);
+            border-radius: 10px;
+            padding: 12px;
+            margin: 12px 0;
+            border-left: 4px solid #ffffff;
+        }
+        
+        .trial-info h4 {
+            color: #ffffff;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .trial-progress {
+            height: 6px;
+            background: var(--darker);
+            border-radius: 4px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+        
+        .trial-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #000000 0%, #333333 50%, #ffffff 100%);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .trial-days {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        /* Enhanced Settings Section for Mobile */
+        .settings-section {
+            text-align: left;
+        }
+        
+        .settings-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: var(--shadow);
+        }
+        
+        .settings-group {
+            margin-bottom: 20px;
+        }
+        
+        .settings-group h3 {
+            color: var(--primary);
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .language-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .language-option {
+            padding: 12px;
+            background: var(--darker);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .language-option.active {
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .language-option:hover {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        /* Enhanced Results Modal for Mobile */
+        .result-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 15px;
+        }
+        
+        .result-content {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid var(--primary);
+            max-width: 350px;
+            width: 100%;
+            box-shadow: var(--shadow);
+        }
+        
+        .result-success {
+            border-color: var(--success);
+        }
+        
+        .result-error {
+            border-color: var(--danger);
+        }
+        
+        .result-icon {
+            font-size: 42px;
+            margin-bottom: 12px;
+        }
+        
+        /* Enhanced New Course Modal for Mobile */
+        .new-course-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 15px;
+        }
+        
+        .new-course-content {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid var(--primary);
+            max-width: 400px;
+            width: 100%;
+            box-shadow: var(--shadow);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--card-border);
+            border-radius: 10px;
+            background: var(--darker);
+            color: var(--text-primary);
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+        }
+        
+        .form-actions .btn {
+            flex: 1;
+            margin: 0;
+        }
+        
+        /* Enhanced Camera Permission for Mobile */
+        .camera-permission {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 20px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        
+        .camera-permission i {
+            font-size: 42px;
+            margin-bottom: 12px;
+            color: var(--primary);
+        }
+        
+        .enable-camera-text {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 12px 0;
+            line-height: 1.2;
+            text-align: center;
+        }
+        
+        .enable-camera-text span {
+            display: block;
+        }
+        
+        .camera-instruction {
+            font-size: 13px;
+            margin: 8px 0 15px;
+            color: var(--text-secondary);
+        }
+        
+        /* Enhanced Empty State for Mobile */
+        .empty-state {
+            text-align: center;
+            padding: 30px 15px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 56px;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+        
+        /* WhatsApp-Style Notification System */
+        .whatsapp-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border-left: 4px solid #25D366;
+            z-index: 10000;
+            transform: translateX(400px);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        .whatsapp-notification.show {
+            transform: translateX(0);
+        }
+        
+        .whatsapp-notification-header {
+            background: #25D366;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+        }
+        
+        .whatsapp-notification-icon {
+            font-size: 18px;
+        }
+        
+        .whatsapp-notification-app {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .whatsapp-notification-time {
+            margin-left: auto;
+            font-size: 11px;
+            opacity: 0.9;
+        }
+        
+        .whatsapp-notification-body {
+            padding: 15px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        
+        .whatsapp-notification-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .whatsapp-notification-content {
+            flex: 1;
+        }
+        
+        .whatsapp-notification-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+        
+        .whatsapp-notification-message {
+            font-size: 13px;
+            color: #4a4a4a;
+            line-height: 1.4;
+        }
+        
+        .whatsapp-notification-footer {
+            padding: 10px 15px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: flex-end;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .whatsapp-notification-close {
+            background: none;
+            border: none;
+            color: #6c757d;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .whatsapp-notification-close:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        /* Notification variants */
+        .whatsapp-notification.present {
+            border-left-color: #25D366;
+        }
+        
+        .whatsapp-notification.subscription {
+            border-left-color: #FFD700;
+        }
+        
+        .whatsapp-notification.subscription .whatsapp-notification-header {
+            background: #FFD700;
+            color: #1a1a1a;
+        }
+        
+        .whatsapp-notification.course {
+            border-left-color: #667eea;
+        }
+        
+        .whatsapp-notification.course .whatsapp-notification-header {
+            background: #667eea;
+        }
+        
+        /* Notification Container */
+        .notification-container {
+            position: fixed;
+            top: 80px;
+            right: 15px;
+            z-index: 1001;
+            max-width: 350px;
+            width: 100%;
+        }
+        
+        .notification {
+            background: var(--card-bg);
+            border-left: 4px solid var(--primary);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideInRight 0.3s ease;
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            border-left-color: var(--success);
+        }
+        
+        .notification.error {
+            border-left-color: var(--danger);
+        }
+        
+        .notification.info {
+            border-left-color: var(--secondary);
+        }
+        
+        .notification.warning {
+            border-left-color: var(--warning);
+        }
+        
+        .notification-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .notification-message {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .notification-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .notification-close:hover {
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.1);
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .notification.hiding {
+            animation: slideOutRight 0.3s ease;
+        }
+        
+        /* Payment Form Styles */
+        .payment-form {
+            margin-top: 15px;
+        }
+        
+        .card-element {
+            padding: 12px;
+            border: 2px solid var(--card-border);
+            border-radius: 10px;
+            background: var(--darker);
+            margin-bottom: 15px;
+        }
+        
+        .card-errors {
+            color: var(--danger);
+            font-size: 13px;
+            margin-bottom: 10px;
+            min-height: 20px;
+        }
+        
+        /* Enhanced Responsive Design */
+        @media (max-width: 768px) {
+            .attendance-table {
+                font-size: 11px;
+            }
+            
+            .attendance-table th,
+            .attendance-table td {
+                padding: 8px 6px;
+            }
+            
+            .subscription-banner,
+            .trial-banner {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .banner-content {
+                text-align: center;
+            }
+            
+            .whatsapp-notification {
+                width: 280px;
+                right: 10px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 { font-size: 18px; }
+            .camera-container { height: 250px; max-width: 100%; }
+            .btn { width: 100%; margin: 0; padding: 12px; }
+            .language-options { grid-template-columns: 1fr; }
+            .form-actions { flex-direction: column; }
+            .history-title-section { flex-direction: column; gap: 8px; align-items: flex-start; }
+            .history-filters { flex-direction: column; }
+            .attendance-table {
+                font-size: 10px;
+            }
+            .attendance-table th,
+            .attendance-table td {
+                padding: 6px 4px;
+            }
+            .new-course-content { padding: 15px; }
+            .result-content { padding: 20px; }
+            .whatsapp-notification {
+                width: 260px;
+                right: 5px;
+                top: 10px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .header { padding: 12px; }
+            .header h1 { font-size: 16px; }
+            .student-info { font-size: 11px; }
+            .theme-toggle, .settings-toggle, .new-course-toggle { 
+                width: 36px; height: 36px; font-size: 14px; 
+            }
+            .whatsapp-notification {
+                width: 240px;
+            }
+        }
+
+        /* Improved touch scrolling */
+        .attendance-table-container {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Better button touch targets */
+        .btn, .nav-item, .theme-toggle, .settings-toggle, .new-course-toggle {
+            min-height: 44px;
+        }
+    </style>
+</head>
+<body>
+    <!-- WhatsApp-Style Notification Container -->
+    <div id="whatsappNotification" class="whatsapp-notification">
+        <div class="whatsapp-notification-header">
+            <div class="whatsapp-notification-icon">
+                <i class="fab fa-whatsapp"></i>
+            </div>
+            <div class="whatsapp-notification-app">SmartTendance</div>
+            <div class="whatsapp-notification-time" id="notificationTime">now</div>
+        </div>
+        <div class="whatsapp-notification-body">
+            <div class="whatsapp-notification-avatar">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+            <div class="whatsapp-notification-content">
+                <div class="whatsapp-notification-title" id="notificationTitle">Attendance Recorded</div>
+                <div class="whatsapp-notification-message" id="notificationMessage">Your attendance has been successfully recorded for CS101 - Computer Science</div>
+            </div>
+        </div>
+        <div class="whatsapp-notification-footer">
+            <button class="whatsapp-notification-close" onclick="closeWhatsAppNotification()">Close</button>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div class="notification-container" id="notificationContainer"></div>
+
+    <div class="app-container">
+        <!-- Enhanced Header for Mobile -->
+        <div class="header">
+            <div class="header-content">
+                <h1 id="headerTitle">🎓 SmartTendance</h1>
+                <div class="student-info">
+                    <span id="studentName">John Smith</span> • 
+                    <span id="studentId">STU1001</span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="new-course-toggle" onclick="showNewCourseModal()">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Subscription Status Banner -->
+        <div id="subscriptionBanner" class="subscription-banner" style="display: none;">
+            <div class="banner-content">
+                <h3 id="bannerTitle">Subscription Required</h3>
+                <p id="bannerMessage">Your free trial has ended. Please subscribe to continue using SmartTendance.</p>
+            </div>
+            <button class="btn btn-small" onclick="switchTab('subscription')">
+                <i class="fas fa-crown"></i> <span id="subscribeNowText">Subscribe Now</span>
+            </button>
+        </div>
+        
+        <!-- Trial Info Banner -->
+        <div id="trialBanner" class="trial-banner" style="display: none;">
+            <div class="banner-content">
+                <h3><i class="fas fa-clock"></i> <span id="freeTrialText">Free Trial Active</span></h3>
+                <p><span id="trialDaysText">You have</span> <span id="trialDaysLeft">7</span> <span id="daysLeftText">days left in your free trial</span></p>
+                <div class="trial-progress">
+                    <div id="trialProgressBar" class="trial-progress-bar" style="width: 50%"></div>
+                </div>
+                <div class="trial-days">
+                    <span id="day1Text">Day 1</span>
+                    <span id="trialEndDate">Day 7</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scanner Tab -->
+        <div id="scanner" class="tab-content active">
+            <div class="scanner-section">
+                <h2 id="scanTitle">Scan QR Code</h2>
+                <p id="scanDescription" style="color: var(--text-secondary); margin: 8px 0 12px;">Point your camera at the professor's QR code</p>
+                
+                <div class="scanner-box">
+                    <div class="camera-container">
+                        <video id="video" playsinline autoplay></video>
+                        <div class="scan-overlay">
+                            <div class="scan-line"></div>
+                        </div>
+                        <div id="cameraPermission" class="camera-permission" style="display: none;">
+                            <i class="fas fa-camera"></i>
+                            <div class="enable-camera-text">
+                                <span id="enableCameraText1">Enable</span>
+                                <span id="enableCameraText2">Camera</span>
+                            </div>
+                            <p class="camera-instruction" id="cameraInstructionText">Camera access is required to scan QR codes</p>
+                            <button class="btn" onclick="startScanner()" style="margin-top: 15px;">
+                                <i class="fas fa-play"></i> <span id="enableCameraBtnText">Enable Camera</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="scanner-controls">
+                        <button class="btn" onclick="stopScanner()" id="stopBtn">
+                            <i class="fas fa-stop"></i> <span id="stopScannerText">Stop Scanner</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="color: var(--text-secondary); font-size: 11px; margin-top: 15px;">
+                    <i class="fas fa-lightbulb"></i> <span id="cameraTipsText">Tips: Ensure good lighting and hold steady for 2 seconds</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+            <div class="history-header">
+                <div class="history-title-section">
+                    <h2 id="historyTitle">Attendance History</h2>
+                </div>
+                <p id="historyDescription" style="color: var(--text-secondary); font-size: 13px;">Your complete attendance records</p>
+                
+                <!-- Course Filter -->
+                <div class="history-filters">
+                    <select id="courseFilter" class="filter-select" onchange="filterAttendanceHistory()">
+                        <option value="" id="allCoursesOption">All Courses</option>
+                        <!-- Course options will be loaded here -->
+                    </select>
+                    <select id="statusFilter" class="filter-select" onchange="filterAttendanceHistory()">
+                        <option value="" id="allStatusOption">All Status</option>
+                        <option value="present" id="presentOption">Present</option>
+                        <option value="absent" id="absentOption">Absent</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Summary Table -->
+            <div class="summary-section">
+                <h3 id="summaryTitle">Attendance Summary</h3>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th id="courseCodeHeader">Course Code</th>
+                            <th id="courseNameHeader">Course Name</th>
+                            <th id="attendedHeader">Attended</th>
+                            <th id="totalHeader">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryTableBody">
+                        <!-- Summary rows will be generated here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Enhanced Tabular Attendance History for Mobile -->
+            <div class="attendance-table-container">
+                <table class="attendance-table" id="attendanceTable">
+                    <thead>
+                        <tr>
+                            <th id="tableCourseCodeHeader">Course Code</th>
+                            <th id="tableCourseNameHeader">Course Name</th>
+                            <th id="dateHeader">Date</th>
+                            <th id="timeHeader">Time</th>
+                            <th id="roomHeader">Room</th>
+                            <th id="statusHeader">Status</th>
+                            <th class="action-cell" id="actionHeader">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTableBody">
+                        <!-- Attendance records will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Subscription Tab -->
+        <div id="subscription" class="tab-content">
+            <h2 id="subscriptionTitle">Semester Subscription</h2>
+            <p id="subscriptionDescription" style="color: var(--text-secondary); margin-bottom: 15px; font-size: 13px;">Manage your subscription and payment methods</p>
+            
+            <div class="subscription-card">
+                <h3><i class="fas fa-crown"></i> <span id="currentPlanText">Current Plan</span></h3>
+                
+                <div class="subscription-info">
+                    <div class="subscription-row">
+                        <span id="planLabel">Plan:</span>
+                        <span><strong id="planValue">Student Access</strong></span>
+                    </div>
+                    <div class="subscription-row">
+                        <span id="priceLabel">Price:</span>
+                        <span><strong id="priceValue">$1 / 4 months</strong></span>
+                    </div>
+                    <div class="subscription-row">
+                        <span id="statusLabel">Status:</span>
+                        <span id="subscriptionStatus" style="color: var(--primary);"><strong id="statusValue">Active (Trial - 7 days left)</strong></span>
+                    </div>
+                    <div class="subscription-row">
+                        <span id="expiresLabel">Expires:</span>
+                        <span id="subscriptionExpiry"><strong id="expiresValue">10/24/2025</strong></span>
+                    </div>
+                </div>
+                
+                <!-- Trial Information -->
+                <div id="trialInfo" class="trial-info" style="display: none;">
+                    <h4><i class="fas fa-clock"></i> <span id="freeTrialLabel">Free Trial</span></h4>
+                    <p style="font-size: 13px;" id="trialDescription">You're currently on a free trial. Subscribe now to unlock full features after your trial ends.</p>
+                    <div class="trial-progress">
+                        <div id="trialProgress" class="trial-progress-bar" style="width: 50%"></div>
+                    </div>
+                    <div class="trial-days">
+                        <span id="day1Label">Day 1</span>
+                        <span id="trialEnd">Day 7</span>
+                    </div>
+                </div>
+                
+                <h4 style="margin-top: 15px;" id="paymentMethodsTitle">Payment Methods</h4>
+                <div class="payment-options">
+                    <div class="payment-option" onclick="showPaymentForm('card')">
+                        <div class="payment-icon"><i class="fas fa-credit-card"></i></div>
+                        <div>
+                            <div><strong id="payWithCardText">Pay with Card</strong></div>
+                            <div style="font-size: 11px; color: var(--text-secondary);" id="cardDescriptionText">Visa, Mastercard, American Express</div>
+                        </div>
+                    </div>
+                    <div class="payment-option" onclick="showPaymentForm('paypal')">
+                        <div class="payment-icon"><i class="fab fa-paypal"></i></div>
+                        <div>
+                            <div><strong id="payWithPaypalText">Pay with PayPal</strong></div>
+                            <div style="font-size: 11px; color: var(--text-secondary);" id="paypalDescriptionText">Secure PayPal payment</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 15px; font-size: 11px; color: var(--text-secondary);">
+                    <i class="fas fa-shield-alt"></i> <span id="securePaymentText">Secure Payment Powered by Stripe & PayPal</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <div class="settings-section">
+                <h2 id="settingsTitle">Settings</h2>
+                <p id="settingsDescription" style="color: var(--text-secondary); margin-bottom: 15px; font-size: 13px;">Customize your app experience</p>
+                
+                <div class="settings-card">
+                    <div class="settings-group">
+                        <h3 id="languageTitle">Language</h3>
+                        <div class="language-options">
+                            <div class="language-option active" data-lang="en">
+                                English
+                            </div>
+                            <div class="language-option" data-lang="es">
+                                Spanish
+                            </div>
+                            <div class="language-option" data-lang="fr">
+                                French
+                            </div>
+                            <div class="language-option" data-lang="ar">
+                                Arabic
+                            </div>
+                            <div class="language-option" data-lang="zh">
+                                Chinese
+                            </div>
+                            <div class="language-option" data-lang="hi">
+                                Hindi
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Bottom Navigation -->
+    <div class="bottom-nav">
+        <button class="nav-item active" onclick="switchTab('scanner')">
+            <i class="fas fa-qrcode"></i>
+            <span class="nav-label" id="scanNavLabel">Scan</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('history')">
+            <i class="fas fa-history"></i>
+            <span class="nav-label" id="historyNavLabel">History</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('subscription')">
+            <i class="fas fa-crown"></i>
+            <span class="nav-label" id="premiumNavLabel">Premium</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('settings')">
+            <i class="fas fa-cog"></i>
+            <span class="nav-label" id="settingsNavLabel">Settings</span>
+        </button>
+    </div>
+
+    <!-- Result Modal -->
+    <div class="result-modal" id="resultModal" style="display: none;">
+        <div class="result-content" id="resultContent">
+            <div class="result-icon" id="resultIcon">✅</div>
+            <h3 id="resultTitle">Attendance Recorded!</h3>
+            <p id="resultMessage" style="margin: 12px 0; font-size: 14px;"></p>
+            <button class="btn" onclick="closeResult()">
+                <span id="continueBtnText">Continue</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- New Course Modal -->
+    <div class="new-course-modal" id="newCourseModal" style="display: none;">
+        <div class="new-course-content">
+            <h2><i class="fas fa-plus"></i> <span id="addCourseTitle">Add Course</span></h2>
+            <p style="color: var(--text-secondary); margin: 8px 0 15px; font-size: 13px;" id="addCourseDescription">Add a course to track attendance</p>
+            
+            <div class="form-group">
+                <label for="courseCode" id="courseCodeLabel">Course Code</label>
+                <input type="text" id="courseCode" placeholder="e.g., CS101">
+            </div>
+            
+            <div class="form-group">
+                <label for="courseName" id="courseNameLabel">Course Name</label>
+                <input type="text" id="courseName" placeholder="e.g., Computer Science 101">
+            </div>
+            
+            <div class="form-group">
+                <label for="courseRoom" id="roomLabel">Room</label>
+                <input type="text" id="courseRoom" placeholder="e.g., Room 301">
+            </div>
+            
+            <div class="form-group">
+                <label for="courseLevel" id="academicLevelLabel">Academic Level</label>
+                <select id="courseLevel">
+                    <option value="100">100 Level</option>
+                    <option value="200">200 Level</option>
+                    <option value="300">300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="500">500 Level</option>
+                    <option value="600">600 Level</option>
+                    <option value="700">700 Level</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="courseSemester" id="semesterLabel">Semester</label>
+                <select id="courseSemester">
+                    <option value="1" id="firstSemesterOption">First Semester</option>
+                    <option value="2" id="secondSemesterOption">Second Semester</option>
+                </select>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeNewCourseModal()">
+                    <span id="cancelBtnText">Cancel</span>
+                </button>
+                <button class="btn" onclick="addNewCourse()">
+                    <i class="fas fa-save"></i> <span id="saveBtnText">Add Course</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="new-course-modal" id="paymentModal" style="display: none;">
+        <div class="new-course-content">
+            <h2><i class="fas fa-credit-card"></i> <span id="paymentTitle">Complete Payment</span></h2>
+            <p style="color: var(--text-secondary); margin: 8px 0 15px; font-size: 13px;" id="paymentDescription">Complete your subscription payment</p>
+            
+            <div id="cardPaymentForm" class="payment-form" style="display: none;">
+                <div class="form-group">
+                    <label for="cardholderName">Cardholder Name</label>
+                    <input type="text" id="cardholderName" placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Card Details</label>
+                    <div id="card-element" class="card-element">
+                        <!-- Stripe Card Element will be inserted here -->
+                    </div>
+                    <div id="card-errors" class="card-errors" role="alert"></div>
+                </div>
+            </div>
+            
+            <div id="paypalPaymentForm" class="payment-form" style="display: none;">
+                <div id="paypal-button-container"></div>
+            </div>
+            
+            <div class="subscription-info" style="margin: 20px 0;">
+                <div class="subscription-row">
+                    <span>Plan:</span>
+                    <span><strong>Student Access</strong></span>
+                </div>
+                <div class="subscription-row">
+                    <span>Duration:</span>
+                    <span><strong>4 Months</strong></span>
+                </div>
+                <div class="subscription-row">
+                    <span>Amount:</span>
+                    <span><strong>$1.00 USD</strong></span>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closePaymentModal()">
+                    <span id="cancelPaymentText">Cancel</span>
+                </button>
+                <button class="btn" id="payWithCardBtn" onclick="processCardPayment()" style="display: none;">
+                    <i class="fas fa-lock"></i> <span id="payBtnText">Pay $1.00</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Student data
+        let studentCourses = [];
+        let attendanceRecords = [];
+        let videoStream = null;
+        let scanInterval = null;
+        let isScannerActive = false;
+        let currentLanguage = 'en';
+        
+        // Payment variables
+        let stripe = null;
+        let cardElement = null;
+        let currentPaymentMethod = null;
+
+        const TRIAL_DAYS = 7;
+        const SUBSCRIPTION_PRICE = 1.00; // USD
+        const SUBSCRIPTION_DURATION = 4; // Months
+
+        // WhatsApp-style notification system
+        function showWhatsAppNotification(type, title, message) {
+            const notification = document.getElementById('whatsappNotification');
+            const notificationTitle = document.getElementById('notificationTitle');
+            const notificationMessage = document.getElementById('notificationMessage');
+            const notificationTime = document.getElementById('notificationTime');
+            
+            // Set notification content
+            notificationTitle.textContent = title;
+            notificationMessage.textContent = message;
+            notificationTime.textContent = 'now';
+            
+            // Set notification type (color scheme)
+            notification.className = 'whatsapp-notification';
+            notification.classList.add(type);
+            notification.classList.add('show');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                closeWhatsAppNotification();
+            }, 5000);
+            
+            // Play notification sound (simulated)
+            playNotificationSound();
+        }
+        
+        function closeWhatsAppNotification() {
+            const notification = document.getElementById('whatsappNotification');
+            notification.classList.remove('show');
+        }
+        
+        function playNotificationSound() {
+            // In a real app, you would play an actual sound
+            // For demo purposes, we'll just log to console
+            console.log("🔔 Notification sound played");
+            
+            // You could add actual audio playback here:
+            /*
+            const audio = new Audio('notification-sound.mp3');
+            audio.play().catch(e => console.log('Audio play failed:', e));
+            */
+        }
+        
+        // Language translations
+        const translations = {
+            en: {
+                // Header
+                appTitle: "🎓 SmartTendance",
+                studentName: "John Smith",
+                studentId: "STU1001",
+                
+                // Navigation
+                scanNavLabel: "Scan",
+                historyNavLabel: "History",
+                premiumNavLabel: "Premium",
+                settingsNavLabel: "Settings",
+                
+                // Scanner Tab
+                scanTitle: "Scan QR Code",
+                scanDescription: "Point your camera at the professor's QR code",
+                enableCameraText1: "Enable",
+                enableCameraText2: "Camera",
+                cameraInstructionText: "Camera access is required to scan QR codes",
+                enableCameraBtnText: "Enable Camera",
+                stopScannerText: "Stop Scanner",
+                cameraTipsText: "Tips: Ensure good lighting and hold steady for 2 seconds",
+                
+                // History Tab
+                historyTitle: "Attendance History",
+                historyDescription: "Your complete attendance records",
+                allCoursesOption: "All Courses",
+                allStatusOption: "All Status",
+                presentOption: "Present",
+                absentOption: "Absent",
+                summaryTitle: "Attendance Summary",
+                courseCodeHeader: "Course Code",
+                courseNameHeader: "Course Name",
+                attendedHeader: "Attended",
+                totalHeader: "Total",
+                tableCourseCodeHeader: "Course Code",
+                tableCourseNameHeader: "Course Name",
+                dateHeader: "Date",
+                timeHeader: "Time",
+                roomHeader: "Room",
+                statusHeader: "Status",
+                actionHeader: "Action",
+                
+                // Subscription Tab
+                subscriptionTitle: "Semester Subscription",
+                subscriptionDescription: "Manage your subscription and payment methods",
+                currentPlanText: "Current Plan",
+                planLabel: "Plan:",
+                priceLabel: "Price:",
+                statusLabel: "Status:",
+                expiresLabel: "Expires:",
+                freeTrialLabel: "Free Trial",
+                trialDescription: "You're currently on a free trial. Subscribe now to unlock full features after your trial ends.",
+                day1Label: "Day 1",
+                paymentMethodsTitle: "Payment Methods",
+                payWithCardText: "Pay with Card",
+                cardDescriptionText: "Visa, Mastercard, American Express",
+                payWithPaypalText: "Pay with PayPal",
+                paypalDescriptionText: "Secure PayPal payment",
+                securePaymentText: "Secure Payment Powered by Stripe & PayPal",
+                
+                // Settings Tab
+                settingsTitle: "Settings",
+                settingsDescription: "Customize your app experience",
+                languageTitle: "Language",
+                
+                // New Course Modal
+                addCourseTitle: "Add Course",
+                addCourseDescription: "Add a course to track attendance",
+                courseCodeLabel: "Course Code",
+                courseNameLabel: "Course Name",
+                roomLabel: "Room",
+                academicLevelLabel: "Academic Level",
+                semesterLabel: "Semester",
+                firstSemesterOption: "First Semester",
+                secondSemesterOption: "Second Semester",
+                cancelBtnText: "Cancel",
+                saveBtnText: "Add Course",
+                
+                // Result Modal
+                continueBtnText: "Continue",
+                
+                // Payment Modal
+                paymentTitle: "Complete Payment",
+                paymentDescription: "Complete your subscription payment",
+                cancelPaymentText: "Cancel",
+                payBtnText: "Pay $1.00",
+                
+                // Banners
+                freeTrialText: "Free Trial Active",
+                trialDaysText: "You have",
+                daysLeftText: "days left in your free trial",
+                day1Text: "Day 1",
+                subscribeNowText: "Subscribe Now",
+                bannerTitle: "Subscription Required",
+                bannerMessage: "Your free trial has ended. Please subscribe to continue using SmartTendance.",
+                
+                // Subscription Info
+                planValue: "Student Access",
+                priceValue: "$1 / 4 months",
+                statusValue: "Active (Trial - 7 days left)",
+                expiresValue: "10/24/2025",
+                trialEnd: "Day 7",
+                trialEndDate: "Day 7",
+                
+                // Empty States
+                noRecordsText: "No attendance records found.",
+                noCoursesText: "No courses added yet. Use the + button to add courses."
+            },
+            fr: {
+                appTitle: "🎓 SmartTendance",
+                studentName: "Jean Dupont",
+                studentId: "STU1001",
+                scanNavLabel: "Scanner",
+                historyNavLabel: "Historique",
+                premiumNavLabel: "Premium",
+                settingsNavLabel: "Paramètres",
+                scanTitle: "Scanner le code QR",
+                scanDescription: "Pointez votre appareil photo vers le code QR du professeur",
+                enableCameraText1: "Activer",
+                enableCameraText2: "Caméra",
+                cameraInstructionText: "L'accès à la caméra est requis pour scanner les codes QR",
+                enableCameraBtnText: "Activer la caméra",
+                stopScannerText: "Arrêter le scanner",
+                cameraTipsText: "Conseils: Assurez un bon éclairage et maintenez stable pendant 2 secondes",
+                historyTitle: "Historique de présence",
+                historyDescription: "Vos enregistrements de présence complets",
+                allCoursesOption: "Tous les cours",
+                allStatusOption: "Tous les statuts",
+                presentOption: "Présent",
+                absentOption: "Absent",
+                summaryTitle: "Résumé de présence",
+                courseCodeHeader: "Code du cours",
+                courseNameHeader: "Nom du cours",
+                attendedHeader: "Assisté",
+                totalHeader: "Total",
+                tableCourseCodeHeader: "Code du cours",
+                tableCourseNameHeader: "Nom du cours",
+                dateHeader: "Date",
+                timeHeader: "Heure",
+                roomHeader: "Salle",
+                statusHeader: "Statut",
+                actionHeader: "Action",
+                subscriptionTitle: "Abonnement semestriel",
+                subscriptionDescription: "Gérez votre abonnement et vos méthodes de paiement",
+                currentPlanText: "Plan actuel",
+                planLabel: "Plan:",
+                priceLabel: "Prix:",
+                statusLabel: "Statut:",
+                expiresLabel: "Expire:",
+                freeTrialLabel: "Essai gratuit",
+                trialDescription: "Vous êtes actuellement en essai gratuit. Abonnez-vous maintenant pour débloquer toutes les fonctionnalités après votre essai.",
+                day1Label: "Jour 1",
+                paymentMethodsTitle: "Méthodes de paiement",
+                payWithCardText: "Payer par carte",
+                cardDescriptionText: "Visa, Mastercard, American Express",
+                payWithPaypalText: "Payer avec PayPal",
+                paypalDescriptionText: "Paiement sécurisé PayPal",
+                securePaymentText: "Paiement sécurisé par Stripe et PayPal",
+                settingsTitle: "Paramètres",
+                settingsDescription: "Personnalisez votre expérience d'application",
+                languageTitle: "Langue",
+                addCourseTitle: "Ajouter un cours",
+                addCourseDescription: "Ajouter un cours pour suivre la présence",
+                courseCodeLabel: "Code du cours",
+                courseNameLabel: "Nom du cours",
+                roomLabel: "Salle",
+                academicLevelLabel: "Niveau académique",
+                semesterLabel: "Semestre",
+                firstSemesterOption: "Premier semestre",
+                secondSemesterOption: "Deuxième semestre",
+                cancelBtnText: "Annuler",
+                saveBtnText: "Ajouter le cours",
+                continueBtnText: "Continuer",
+                paymentTitle: "Compléter le paiement",
+                paymentDescription: "Complétez votre paiement d'abonnement",
+                cancelPaymentText: "Annuler",
+                payBtnText: "Payer 1.00$",
+                freeTrialText: "Essai gratuit actif",
+                trialDaysText: "Il vous reste",
+                daysLeftText: "jours dans votre essai gratuit",
+                day1Text: "Jour 1",
+                subscribeNowText: "S'abonner maintenant",
+                bannerTitle: "Abonnement requis",
+                bannerMessage: "Votre essai gratuit est terminé. Veuillez vous abonner pour continuer à utiliser SmartTendance.",
+                planValue: "Accès Étudiant",
+                priceValue: "1$ / 4 mois",
+                statusValue: "Actif (Essai - 7 jours restants)",
+                expiresValue: "24/10/2025",
+                trialEnd: "Jour 7",
+                trialEndDate: "Jour 7",
+                noRecordsText: "Aucun enregistrement de présence trouvé.",
+                noCoursesText: "Aucun cours ajouté pour le moment. Utilisez le bouton + pour ajouter des cours."
+            }
+        };
+
+        // Initialize Stripe (using test key)
+        function initializeStripe() {
+            stripe = Stripe('pk_test_51ExampleTestKey1234567890');
+            const elements = stripe.elements();
+            
+            const style = {
+                base: {
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary'),
+                    fontFamily: '"Segoe UI", Arial, sans-serif',
+                    fontSmoothing: 'antialiased',
+                    fontSize: '16px',
+                    '::placeholder': {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary')
+                    }
+                },
+                invalid: {
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--danger'),
+                    iconColor: getComputedStyle(document.documentElement).getPropertyValue('--danger')
+                }
+            };
+            
+            cardElement = elements.create('card', { style: style });
+            cardElement.mount('#card-element');
+            
+            cardElement.on('change', function(event) {
+                const displayError = document.getElementById('card-errors');
+                if (event.error) {
+                    displayError.textContent = event.error.message;
+                } else {
+                    displayError.textContent = '';
+                }
+            });
+        }
+
+        // Initialize PayPal
+        function initializePayPal() {
+            paypal.Buttons({
+                createOrder: function(data, actions) {
+                    return actions.order.create({
+                        purchase_units: [{
+                            amount: {
+                                value: SUBSCRIPTION_PRICE.toString()
+                            }
+                        }]
+                    });
+                },
+                onApprove: function(data, actions) {
+                    return actions.order.capture().then(function(details) {
+                        processSuccessfulPayment('paypal', details.id);
+                    });
+                },
+                onError: function(err) {
+                    showResult('error', 'Payment Failed', 'There was an error processing your PayPal payment. Please try again.');
+                    console.error('PayPal Error:', err);
+                }
+            }).render('#paypal-button-container');
+        }
+
+        // Show notification
+        function showNotification(type, title, message, duration = 5000) {
+            const container = document.getElementById('notificationContainer');
+            const notificationId = 'notification_' + Date.now();
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.id = notificationId;
+            
+            let icon = '🔔';
+            switch(type) {
+                case 'success': icon = '✅'; break;
+                case 'error': icon = '❌'; break;
+                case 'warning': icon = '⚠️'; break;
+                case 'info': icon = 'ℹ️'; break;
+            }
+            
+            notification.innerHTML = `
+                <div class="notification-icon">${icon}</div>
+                <div class="notification-content">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-message">${message}</div>
+                </div>
+                <button class="notification-close" onclick="closeNotification('${notificationId}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                closeNotification(notificationId);
+            }, duration);
+        }
+
+        function closeNotification(id) {
+            const notification = document.getElementById(id);
+            if (notification) {
+                notification.classList.add('hiding');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }
+        }
+
+        // Initialize app
+        function initApp() {
+            console.log("🚀 Initializing SmartTendance App...");
+            loadStudentData();
+            initializeSubscription();
+            loadAttendanceHistory();
+            generateSummaryTable();
+            initializeStripe();
+            initializePayPal();
+            
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.body.classList.add('light-mode');
+                document.getElementById('themeToggle').innerHTML = '<i class="fas fa-sun"></i>';
+            }
+            
+            const savedLanguage = localStorage.getItem('language') || 'en';
+            changeLanguage(savedLanguage, false);
+            
+            document.querySelectorAll('.language-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    changeLanguage(lang);
+                });
+            });
+            
+            if (document.getElementById('scanner').classList.contains('active')) {
+                startScanner();
+            }
+            
+            updateSubscriptionStatus();
+            
+            console.log("✅ App initialized successfully!");
+        }
+
+        // Load student data from localStorage
+        function loadStudentData() {
+            const savedCourses = localStorage.getItem('studentCourses');
+            const savedRecords = localStorage.getItem('attendanceRecords');
+            
+            if (savedCourses) {
+                studentCourses = JSON.parse(savedCourses);
+                console.log(`📚 Loaded ${studentCourses.length} courses from storage`);
+            }
+            
+            if (savedRecords) {
+                attendanceRecords = JSON.parse(savedRecords);
+                console.log(`📊 Loaded ${attendanceRecords.length} attendance records from storage`);
+            }
+        }
+
+        // Save student data to localStorage
+        function saveStudentData() {
+            localStorage.setItem('studentCourses', JSON.stringify(studentCourses));
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+        }
+
+        // Initialize subscription system
+        function initializeSubscription() {
+            if (!localStorage.getItem('subscriptionStartDate')) {
+                const trialStartDate = new Date();
+                localStorage.setItem('subscriptionStartDate', trialStartDate.toISOString());
+                localStorage.setItem('subscriptionType', 'trial');
+                localStorage.setItem('subscriptionStatus', 'active');
+            }
+            updateSubscriptionUI();
+        }
+
+        // Update subscription UI
+        function updateSubscriptionUI() {
+            const subscriptionType = localStorage.getItem('subscriptionType');
+            const subscriptionStartDate = new Date(localStorage.getItem('subscriptionStartDate'));
+            
+            if (subscriptionType === 'trial') {
+                const today = new Date();
+                const trialEndDate = new Date(subscriptionStartDate);
+                trialEndDate.setDate(trialEndDate.getDate() + TRIAL_DAYS);
+                
+                const daysLeft = Math.ceil((trialEndDate - today) / (1000 * 60 * 60 * 24));
+                const daysPassed = TRIAL_DAYS - daysLeft;
+                const progressPercentage = (daysPassed / TRIAL_DAYS) * 100;
+                
+                if (daysLeft > 0) {
+                    document.getElementById('trialBanner').style.display = 'flex';
+                    document.getElementById('trialDaysLeft').textContent = daysLeft;
+                    document.getElementById('trialProgressBar').style.width = `${progressPercentage}%`;
+                    document.getElementById('trialInfo').style.display = 'block';
+                    document.getElementById('trialProgress').style.width = `${progressPercentage}%`;
+                    document.getElementById('subscriptionBanner').style.display = 'none';
+                    
+                    document.getElementById('statusValue').textContent = `Active (Trial - ${daysLeft} days left)`;
+                    document.getElementById('subscriptionStatus').style.color = 'var(--warning)';
+                    document.getElementById('expiresValue').textContent = trialEndDate.toLocaleDateString();
+                } else {
+                    document.getElementById('trialBanner').style.display = 'none';
+                    document.getElementById('subscriptionBanner').style.display = 'flex';
+                    document.getElementById('stopBtn').disabled = true;
+                    document.getElementById('stopBtn').innerHTML = '<i class="fas fa-lock"></i> Subscription Required';
+                    
+                    document.getElementById('statusValue').textContent = 'Trial Expired';
+                    document.getElementById('subscriptionStatus').style.color = 'var(--danger)';
+                    document.getElementById('expiresValue').textContent = 'Please Subscribe';
+                }
+            } else if (subscriptionType === 'paid') {
+                document.getElementById('trialBanner').style.display = 'none';
+                document.getElementById('subscriptionBanner').style.display = 'none';
+                document.getElementById('statusValue').textContent = 'Active (Paid)';
+                document.getElementById('subscriptionStatus').style.color = 'var(--primary)';
+                const expiry = localStorage.getItem('subscriptionExpiry');
+                document.getElementById('expiresValue').textContent = new Date(expiry).toLocaleDateString();
+            }
+        }
+
+        // Check if user can scan
+        function canUserScan() {
+            const subscriptionType = localStorage.getItem('subscriptionType');
+            const subscriptionStartDate = new Date(localStorage.getItem('subscriptionStartDate'));
+            
+            if (subscriptionType === 'trial') {
+                const today = new Date();
+                const trialEndDate = new Date(subscriptionStartDate);
+                trialEndDate.setDate(trialEndDate.getDate() + TRIAL_DAYS);
+                return today <= trialEndDate;
+            } else if (subscriptionType === 'paid') {
+                return true;
+            }
+            return false;
+        }
+
+        // Toggle theme
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLightMode = document.body.classList.contains('light-mode');
+            document.getElementById('themeToggle').innerHTML = isLightMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            localStorage.setItem('darkMode', isLightMode);
+        }
+
+        // Tab navigation
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`.nav-item[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            
+            if (tabName === 'scanner') {
+                startScanner();
+            } else {
+                stopScanner();
+            }
+        }
+
+        // Show new course modal
+        function showNewCourseModal() {
+            document.getElementById('newCourseModal').style.display = 'flex';
+            document.getElementById('courseCode').value = '';
+            document.getElementById('courseName').value = '';
+            document.getElementById('courseRoom').value = '';
+            document.getElementById('courseLevel').value = '100';
+            document.getElementById('courseSemester').value = '1';
+        }
+
+        function closeNewCourseModal() {
+            document.getElementById('newCourseModal').style.display = 'none';
+        }
+
+        // Add new course
+        function addNewCourse() {
+            const courseCode = document.getElementById('courseCode').value.trim();
+            const courseName = document.getElementById('courseName').value.trim();
+            const room = document.getElementById('courseRoom').value.trim();
+            const level = document.getElementById('courseLevel').value;
+            const semester = document.getElementById('courseSemester').value;
+            
+            if (!courseCode || !courseName || !room) {
+                showResult('error', 'Missing Information', 'Please fill in all required fields.');
+                return;
+            }
+            
+            if (studentCourses.some(course => course.code === courseCode)) {
+                showResult('error', 'Course Exists', 'This course code is already registered.');
+                return;
+            }
+            
+            const newCourse = {
+                code: courseCode,
+                name: courseName,
+                room: room,
+                level: level,
+                semester: semester,
+                registeredDate: new Date().toISOString()
+            };
+            
+            studentCourses.push(newCourse);
+            saveStudentData();
+            closeNewCourseModal();
+            
+            // Show WhatsApp-style notification for new course
+            showWhatsAppNotification('course', 'Course Added', 
+                `${courseCode} - ${courseName} has been added to your courses.`);
+            
+            showResult('success', 'Course Added!', 
+                `${courseCode} - ${courseName}<br>
+                 Level: ${level}<br>
+                 Semester: ${semester}<br>
+                 Room: ${room}`);
+                 
+            generateSummaryTable();
+        }
+
+        // Generate summary table
+        function generateSummaryTable() {
+            const container = document.getElementById('summaryTableBody');
+            const courseFilter = document.getElementById('courseFilter');
+            
+            courseFilter.innerHTML = '<option value="">' + translations[currentLanguage].allCoursesOption + '</option>';
+            studentCourses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.code;
+                option.textContent = `${course.code} - ${course.name}`;
+                courseFilter.appendChild(option);
+            });
+            
+            if (studentCourses.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                            ${translations[currentLanguage].noCoursesText}
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            studentCourses.forEach(course => {
+                const courseRecords = attendanceRecords.filter(record => record.courseCode === course.code);
+                const total = courseRecords.length;
+                const present = courseRecords.filter(record => record.status === 'present').length;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${course.code}</td>
+                    <td>${course.name}</td>
+                    <td>${present}</td>
+                    <td>${total}</td>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // Load attendance history
+        function loadAttendanceHistory() {
+            const container = document.getElementById('attendanceTableBody');
+            const courseFilter = document.getElementById('courseFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            let filteredRecords = attendanceRecords;
+            
+            if (courseFilter) {
+                filteredRecords = filteredRecords.filter(record => record.courseCode === courseFilter);
+            }
+            
+            if (statusFilter) {
+                filteredRecords = filteredRecords.filter(record => record.status === statusFilter);
+            }
+            
+            if (filteredRecords.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                            ${translations[currentLanguage].noRecordsText}
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            filteredRecords.forEach(record => {
+                const course = studentCourses.find(c => c.code === record.courseCode);
+                const statusClass = record.status === 'present' ? 'status-present' : 'status-absent';
+                const statusText = record.status === 'present' ? translations[currentLanguage].presentOption : translations[currentLanguage].absentOption;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.courseCode}</td>
+                    <td>${course ? course.name : 'Unknown Course'}</td>
+                    <td>${record.date}</td>
+                    <td>${record.time}</td>
+                    <td>${record.room}</td>
+                    <td class="${statusClass}">${statusText}</td>
+                    <td class="action-cell">
+                        <button class="delete-record-btn" onclick="deleteAttendanceRecord('${record.id}')" title="Delete Record">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // Filter attendance history
+        function filterAttendanceHistory() {
+            loadAttendanceHistory();
+        }
+
+        // Delete attendance record
+        function deleteAttendanceRecord(recordId) {
+            if (confirm('Are you sure you want to delete this attendance record?')) {
+                attendanceRecords = attendanceRecords.filter(record => record.id !== recordId);
+                saveStudentData();
+                loadAttendanceHistory();
+                generateSummaryTable();
+                showResult('success', 'Record Deleted', 'Attendance record has been successfully deleted.');
+            }
+        }
+
+        // QR Scanner functionality
+        async function startScanner() {
+            if (isScannerActive) return;
+            
+            if (!canUserScan()) {
+                showResult('error', 'Subscription Required', 'Please subscribe to continue using the QR scanner feature.');
+                switchTab('subscription');
+                return;
+            }
+            
+            if (studentCourses.length === 0) {
+                showResult('error', 'No Courses', 'Please add your courses first using the + button.');
+                return;
+            }
+            
+            const video = document.getElementById('video');
+            const stopBtn = document.getElementById('stopBtn');
+            const cameraPermission = document.getElementById('cameraPermission');
+            
+            try {
+                let constraints = { 
+                    video: { 
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                };
+                
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = videoStream;
+                
+                cameraPermission.style.display = 'none';
+                video.style.display = 'block';
+                
+                stopBtn.disabled = false;
+                stopBtn.innerHTML = '<i class="fas fa-stop"></i> ' + translations[currentLanguage].stopScannerText;
+                
+                scanInterval = setInterval(scanQRCode, 500);
+                isScannerActive = true;
+                
+            } catch (err) {
+                console.error('Camera error:', err);
+                cameraPermission.style.display = 'flex';
+                video.style.display = 'none';
+                showResult('error', 'Camera Error', 'Unable to access camera. Please check permissions and try again.');
+            }
+        }
+
+        function stopScanner() {
+            if (!isScannerActive) return;
+            
+            const video = document.getElementById('video');
+            const stopBtn = document.getElementById('stopBtn');
+            const cameraPermission = document.getElementById('cameraPermission');
+            
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            
+            if (scanInterval) {
+                clearInterval(scanInterval);
+            }
+            
+            cameraPermission.style.display = 'flex';
+            video.style.display = 'none';
+            
+            stopBtn.disabled = true;
+            stopBtn.innerHTML = '<i class="fas fa-play"></i> ' + translations[currentLanguage].enableCameraBtnText;
+            
+            isScannerActive = false;
+        }
+
+        function scanQRCode() {
+            const video = document.getElementById('video');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    processQRCode(code.data);
+                }
+            }
+        }
+
+        function processQRCode(qrData) {
+            try {
+                const data = JSON.parse(qrData);
+                
+                if (data.type === 'attendance') {
+                    stopScanner();
+                    
+                    const courseExists = studentCourses.some(course => 
+                        course.code.toLowerCase() === data.courseCode.toLowerCase()
+                    );
+                    
+                    if (!courseExists) {
+                        showResult('error', 'Course Not Found', 
+                            `Course "${data.courseCode}" is not in your registered courses.<br><br>
+                             Please add this course first using the + button.`);
+                        return;
+                    }
+                    
+                    const today = new Date().toISOString().split('T')[0];
+                    const alreadyRecorded = attendanceRecords.some(record => 
+                        record.courseCode.toLowerCase() === data.courseCode.toLowerCase() && 
+                        record.date === today
+                    );
+                    
+                    if (alreadyRecorded) {
+                        showResult('info', 'Already Recorded', 
+                            `Attendance for ${data.courseCode} has already been recorded today.`);
+                        return;
+                    }
+                    
+                    setTimeout(() => {
+                        const newRecord = {
+                            id: 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                            courseCode: data.courseCode,
+                            date: today,
+                            time: new Date().toLocaleTimeString(),
+                            status: 'present',
+                            room: data.room || 'Unknown'
+                        };
+                        
+                        attendanceRecords.unshift(newRecord);
+                        saveStudentData();
+                        loadAttendanceHistory();
+                        generateSummaryTable();
+                        
+                        const course = studentCourses.find(c => c.code.toLowerCase() === data.courseCode.toLowerCase());
+                        
+                        // Show WhatsApp-style notification when attendance is recorded
+                        showWhatsAppNotification('present', 
+                            'Attendance Recorded', 
+                            `You've been marked present for ${data.courseCode} - ${course ? course.name : 'Unknown Course'}`
+                        );
+                        
+                        showResult('success', 'Attendance Recorded!', 
+                            `Course: ${data.courseCode} - ${course ? course.name : 'Unknown'}<br>
+                             Time: ${newRecord.time}<br>
+                             Status: ✅ ${translations[currentLanguage].presentOption}`);
+                    }, 1000);
+                }
+            } catch (err) {
+                showResult('error', 'Invalid QR Code', 'Please scan a valid attendance QR code.');
+            }
+        }
+
+        // Payment functions
+        function showPaymentForm(method) {
+            currentPaymentMethod = method;
+            document.getElementById('paymentModal').style.display = 'flex';
+            
+            // Reset forms
+            document.getElementById('cardPaymentForm').style.display = 'none';
+            document.getElementById('paypalPaymentForm').style.display = 'none';
+            document.getElementById('payWithCardBtn').style.display = 'none';
+            
+            if (method === 'card') {
+                document.getElementById('cardPaymentForm').style.display = 'block';
+                document.getElementById('payWithCardBtn').style.display = 'block';
+            } else if (method === 'paypal') {
+                document.getElementById('paypalPaymentForm').style.display = 'block';
+            }
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').style.display = 'none';
+            currentPaymentMethod = null;
+        }
+
+        async function processCardPayment() {
+            const cardholderName = document.getElementById('cardholderName').value.trim();
+            
+            if (!cardholderName) {
+                showResult('error', 'Missing Information', 'Please enter cardholder name.');
+                return;
+            }
+            
+            showResult('processing', 'Processing Payment', 'Please wait while we process your payment...');
+            
+            try {
+                // In a real application, you would create a payment intent on your server
+                // For demo purposes, we'll simulate the server response
+                const { paymentIntent, error } = await createPaymentIntent();
+                
+                if (error) {
+                    throw new Error(error);
+                }
+                
+                // Confirm card payment
+                const { paymentError } = await stripe.confirmCardPayment(paymentIntent.client_secret, {
+                    payment_method: {
+                        card: cardElement,
+                        billing_details: {
+                            name: cardholderName,
+                        },
+                    }
+                });
+                
+                if (paymentError) {
+                    throw new Error(paymentError.message);
+                }
+                
+                // Payment successful
+                processSuccessfulPayment('card', paymentIntent.id);
+                
+            } catch (error) {
+                console.error('Payment error:', error);
+                showResult('error', 'Payment Failed', error.message || 'There was an error processing your payment. Please try again.');
+            }
+        }
+
+        // Simulate server-side payment intent creation
+        async function createPaymentIntent() {
+            // In a real application, this would be an API call to your server
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve({
+                        paymentIntent: {
+                            id: 'pi_' + Math.random().toString(36).substr(2, 14),
+                            client_secret: 'pi_' + Math.random().toString(36).substr(2, 14) + '_secret_' + Math.random().toString(36).substr(2, 24),
+                            status: 'succeeded'
+                        },
+                        error: null
+                    });
+                }, 1500);
+            });
+        }
+
+        function processSuccessfulPayment(method, paymentId) {
+            closePaymentModal();
+            
+            const expiryDate = new Date();
+            expiryDate.setMonth(expiryDate.getMonth() + SUBSCRIPTION_DURATION);
+            
+            localStorage.setItem('subscriptionType', 'paid');
+            localStorage.setItem('subscriptionStatus', 'active');
+            localStorage.setItem('subscriptionExpiry', expiryDate.toISOString());
+            localStorage.setItem('subscriptionPaid', 'true');
+            localStorage.setItem('lastPaymentMethod', method);
+            localStorage.setItem('lastPaymentId', paymentId);
+            localStorage.setItem('lastPaymentDate', new Date().toISOString());
+            
+            updateSubscriptionStatus();
+            updateSubscriptionUI();
+            
+            // Show WhatsApp-style notification for successful subscription
+            showWhatsAppNotification('subscription', 
+                'Subscription Activated', 
+                `Your SmartTendance subscription is now active until ${expiryDate.toLocaleDateString()}.`
+            );
+            
+            showResult('success', 'Payment Successful!', 
+                `Thank you for your payment!<br>
+                 Your subscription is now active until ${expiryDate.toLocaleDateString()}.<br>
+                 Payment ID: ${paymentId}`);
+        }
+
+        function updateSubscriptionStatus() {
+            // Handled in updateSubscriptionUI
+        }
+
+        // Language change function
+        function changeLanguage(lang, showMessage = true) {
+            document.querySelectorAll('.language-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            
+            document.querySelector(`.language-option[data-lang="${lang}"]`).classList.add('active');
+            
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            
+            updateTextContent();
+            
+            if (lang === 'ar') {
+                document.documentElement.dir = 'rtl';
+                document.body.style.textAlign = 'right';
+            } else {
+                document.documentElement.dir = 'ltr';
+                document.body.style.textAlign = 'left';
+            }
+            
+            if (showMessage) {
+                showResult('success', 'Language Changed', `App language has been set to ${getLanguageName(lang)}`);
+            }
+        }
+
+        function updateTextContent() {
+            const t = translations[currentLanguage];
+            
+            Object.keys(t).forEach(key => {
+                const element = document.getElementById(key);
+                if (element) {
+                    element.textContent = t[key];
+                }
+            });
+            
+            generateSummaryTable();
+            loadAttendanceHistory();
+            updateSubscriptionUI();
+        }
+
+        function getLanguageName(code) {
+            const languages = {
+                'en': 'English',
+                'es': 'Spanish',
+                'fr': 'French',
+                'ar': 'Arabic',
+                'zh': 'Chinese',
+                'hi': 'Hindi'
+            };
+            return languages[code] || 'Unknown';
+        }
+
+        // Result modal functions
+        function showResult(type, title, message) {
+            const modal = document.getElementById('resultModal');
+            const content = document.getElementById('resultContent');
+            const icon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            content.className = `result-content ${type === 'success' ? 'result-success' : type === 'error' ? 'result-error' : ''}`;
+            
+            if (type === 'processing') {
+                icon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            } else {
+                icon.textContent = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+            }
+            
+            resultTitle.textContent = title;
+            resultMessage.innerHTML = message;
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeResult() {
+            document.getElementById('resultModal').style.display = 'none';
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initApp);
+        
+        // Theme toggle
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    </script>
+</body>
+</html>
